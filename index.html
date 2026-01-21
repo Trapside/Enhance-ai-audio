@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>AI Studio</title>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold tracking-tighter mb-2">STUDIO AI</h1>
+        <p class="text-zinc-500 mb-12">Turn phone vocals into raw studio quality</p>
+        
+        <button id="rec" class="w-40 h-40 rounded-full border-2 border-zinc-800 flex items-center justify-center transition-all active:scale-95 shadow-[0_0_50px_-12px_rgba(255,255,255,0.2)]">
+            <div id="inner" class="w-16 h-16 bg-red-600 rounded-full transition-all"></div>
+        </button>
+        
+        <p id="status" class="mt-8 text-sm uppercase tracking-widest text-zinc-400">Tap to record</p>
+        <div id="result" class="mt-8 hidden">
+            <audio id="audio" controls class="w-full max-w-xs invert"></audio>
+            <a id="dl" class="block mt-4 text-blue-500 underline">Download Raw Studio Vocal</a>
+        </div>
+    </div>
+
+    <script>
+        let chunks = []; let recorder;
+        const btn = document.getElementById('rec');
+        const inner = document.getElementById('inner');
+        const status = document.getElementById('status');
+
+        btn.onclick = async () => {
+            if (!recorder || recorder.state === 'inactive') {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                recorder = new MediaRecorder(stream);
+                recorder.ondataavailable = e => chunks.push(e.data);
+                recorder.onstop = async () => {
+                    status.innerText = "Polishing in the cloud...";
+                    const blob = new Blob(chunks, { type: 'audio/wav' });
+                    const fd = new FormData(); fd.append('file', blob);
+                    const res = await fetch('/enhance', { method: 'POST', body: fd });
+                    const out = await res.blob();
+                    const url = URL.createObjectURL(out);
+                    document.getElementById('audio').src = url;
+                    document.getElementById('dl').href = url;
+                    document.getElementById('result').classList.remove('hidden');
+                    status.innerText = "Complete";
+                };
+                recorder.start();
+                inner.classList.replace('rounded-full', 'rounded-md');
+                inner.classList.add('scale-75');
+                status.innerText = "Recording...";
+            } else {
+                recorder.stop();
+                inner.classList.replace('rounded-md', 'rounded-full');
+                inner.classList.remove('scale-75');
+            }
+        };
+    </script>
+</body>
+</html>
